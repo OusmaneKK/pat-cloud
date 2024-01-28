@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
 
+# Modifier l'ID utilisateur si WWWUSER est défini
 if [ ! -z "$WWWUSER" ]; then
     usermod -u $WWWUSER sail
 fi
 
+# Créer le répertoire .composer s'il n'existe pas
 if [ ! -d /.composer ]; then
     mkdir /.composer
 fi
 
+# Définir les permissions du répertoire .composer
 chmod -R ugo+rw /.composer
 
+# Exécuter les migrations et le seeding en tant qu'utilisateur sail
+if [ "$RUN_MIGRATIONS" = "true" ]; then
+    gosu sail php artisan migrate --force
+    gosu sail php artisan db:seed --force
+fi
+
+# Exécuter la commande supervisée si des arguments sont passés, sinon démarrer supervisord
 if [ $# -gt 0 ]; then
-    exec gosu $WWWUSER "$@"
+    exec gosu sail "$@"
 else
     exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 fi
